@@ -24,7 +24,6 @@ function extractGroups(fileList) {
 function generateGroupCommand(groupData) {
   return Object.entries(groupData)
     .map(([group, fileList]) => {
-      console.log(fileList);
       const fileListString = fileList
         .map(file => {
           const [filename, group, desc, row, col] = file.match(FILE_REGEX);
@@ -32,9 +31,6 @@ function generateGroupCommand(groupData) {
         })
         .join(' ')
       ;
-
-      console.log(fileListString);
-
 
       const dimensions = fileList.reduce((out, file) => {
         const [filename, group, desc, row, col] = file.match(FILE_REGEX);
@@ -51,7 +47,7 @@ function generateGroupCommand(groupData) {
         return out;
       }, {row: 0, col: 0});
 
-      return `convert -size ${dimensions.row + 512}x${dimensions.col + 192} xc:transparent ${fileListString} intermediate/${group}.png`;
+      return `convert -size ${dimensions.row + 1024}x${dimensions.col + 1024} xc:transparent ${fileListString} -trim +repage intermediate/${group}.png`;
     })
   ;
 }
@@ -60,12 +56,12 @@ function generateGroupCommand(groupData) {
 if (!fs.existsSync('intermediate')) {
   fs.mkdirSync('intermediate');
 } else {
-  // exec('rm intermediate/*')
+  exec('rm intermediate/*')
 }
 if (!fs.existsSync('out')) {
   fs.mkdirSync('out');
 } else {
-  // exec('rm out/*')
+  exec('rm out/*')
 }
 
 const imageList = fs.readdirSync(IMAGE_PATH)
@@ -86,7 +82,7 @@ Promise.all(commandList.map(command => exec(command)))
       .map(group => `intermediate/${group}.png`)
     ;
 
-    const command = `convert ${groupList.join(' ')} -append out/${IMAGE_PATH}.png`;
+    const command = `convert -background transparent ${groupList.join(' ')} -append out/${IMAGE_PATH}.png`;
     return exec(command);
   })
 ;

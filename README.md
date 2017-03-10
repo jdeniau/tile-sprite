@@ -9,3 +9,4 @@ Images must follow this naming: `<group>-<comment>-<col>-<row>.(png|jpg|gif)`
 Copy your images in a directory and run:
 ```
 node tilize.js path-to-directory
+```
