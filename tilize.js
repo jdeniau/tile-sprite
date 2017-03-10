@@ -3,7 +3,7 @@ const exec = require('child_process').execSync;
 
 const FILE_REGEX = new RegExp('([^-]*)(.*)?\-([0-9]+)-([0-9]+)\.(png|jpg|jpeg|gif)$');
 const IMAGE_PATH = process.argv[2] || 'img';
-const OUT_IMAGE_PATH = IMAGE_PATH.match(/([^\/]+)\/?$/)[1];
+const OUT_IMAGE_PATH = process.argv[3] || `out/${IMAGE_PATH.match(/([^\/]+)\/?$/)[1]}.png`;
 
 function rmFilesInDir(dirPath) {
   try { var files = fs.readdirSync(dirPath); }
@@ -74,8 +74,8 @@ if (!fs.existsSync('intermediate')) {
 }
 if (!fs.existsSync('out')) {
   fs.mkdirSync('out');
-} else {
-  rmFilesInDir('out');
+} else if (fs.existsSync(OUT_IMAGE_PATH)) {
+  fs.unlinkSync(OUT_IMAGE_PATH);
 }
 
 const imageList = fs.readdirSync(IMAGE_PATH)
@@ -97,7 +97,9 @@ Promise.all(commandList.map(command => exec(command)))
       .map(group => `intermediate/${group}.png`)
     ;
 
-    const command = `convert -background transparent ${groupList.join(' ')} -append out/${OUT_IMAGE_PATH}.png`;
-    return exec(command);
+    const command = `convert -background transparent ${groupList.join(' ')} -append ${OUT_IMAGE_PATH}`;
+    exec(command);
+
+    console.log(`file ${OUT_IMAGE_PATH} written`);
   })
 ;
