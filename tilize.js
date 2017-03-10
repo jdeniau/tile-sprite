@@ -1,7 +1,8 @@
 const fs = require('fs');
-const exec = require('child_process').exec;
+const exec = require('child_process').execSync;
 
-const FILE_REGEX = new RegExp('(.*)\-([0-9]+)-([0-9]+)\.(png|jpg|jpeg|gif)$');
+const FILE_REGEX = new RegExp('([^-]*)(.*)?\-([0-9]+)-([0-9]+)\.(png|jpg|jpeg|gif)$');
+const IMAGE_PATH = process.argv[2] || 'img';
 
 function extractGroups(fileList) {
   const groupList = fileList
@@ -23,17 +24,20 @@ function extractGroups(fileList) {
 function generateGroupCommand(groupData) {
   return Object.entries(groupData)
     .map(([group, fileList]) => {
+      console.log(fileList);
       const fileListString = fileList
         .map(file => {
-          const [filename, group, col, row] = file.match(FILE_REGEX);
-          return `${file} -geometry +${parseInt(row, 10) * 64}+${parseInt(col, 10) * 64} -composite`;
+          const [filename, group, desc, row, col] = file.match(FILE_REGEX);
+          return `${IMAGE_PATH}/${file} -geometry +${parseInt(row, 10) * 64}+${parseInt(col, 10) * 64} -composite`;
         })
         .join(' ')
       ;
 
+      console.log(fileListString);
+
 
       const dimensions = fileList.reduce((out, file) => {
-        const [filename, group, col, row] = file.match(FILE_REGEX);
+        const [filename, group, desc, row, col] = file.match(FILE_REGEX);
         const col64 = parseInt(col, 10) * 64;
         const row64 = parseInt(row, 10) * 64;
 
@@ -47,7 +51,7 @@ function generateGroupCommand(groupData) {
         return out;
       }, {row: 0, col: 0});
 
-      return `convert -size ${dimensions.row + 128}x${dimensions.col + 128} xc:transparent ${fileListString} intermediate/${group}.png`;
+      return `convert -size ${dimensions.row + 512}x${dimensions.col + 192} xc:transparent ${fileListString} intermediate/${group}.png`;
     })
   ;
 }
@@ -55,15 +59,22 @@ function generateGroupCommand(groupData) {
 
 if (!fs.existsSync('intermediate')) {
   fs.mkdirSync('intermediate');
+} else {
+  // exec('rm intermediate/*')
 }
 if (!fs.existsSync('out')) {
   fs.mkdirSync('out');
+} else {
+  // exec('rm out/*')
 }
 
-const imageList = fs.readdirSync('img/')
+const imageList = fs.readdirSync(IMAGE_PATH)
   .filter(image => image.match(/\.(gif|jpg|jpeg|png)$/))
 ;
+
+console.log(`${imageList.length} images found`);
 const imageGroupList = extractGroups(imageList);
+console.log(`${Object.keys(imageGroupList).length} groups created (${Object.keys(imageGroupList)})`);
 
 const commandList = generateGroupCommand(imageGroupList);
 
@@ -75,7 +86,7 @@ Promise.all(commandList.map(command => exec(command)))
       .map(group => `intermediate/${group}.png`)
     ;
 
-    const command = `convert ${groupList.join(' ')} -append out/out.png`;
+    const command = `convert ${groupList.join(' ')} -append out/${IMAGE_PATH}.png`;
     return exec(command);
   })
 ;
