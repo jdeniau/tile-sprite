@@ -3,6 +3,20 @@ const exec = require('child_process').execSync;
 
 const FILE_REGEX = new RegExp('([^-]*)(.*)?\-([0-9]+)-([0-9]+)\.(png|jpg|jpeg|gif)$');
 const IMAGE_PATH = process.argv[2] || 'img';
+const OUT_IMAGE_PATH = IMAGE_PATH.match(/([^\/]+)\/?$/)[1];
+
+function rmFilesInDir(dirPath) {
+  try { var files = fs.readdirSync(dirPath); }
+  catch(e) { return; }
+  if (files.length > 0)
+    for (var i = 0; i < files.length; i++) {
+      var filePath = dirPath + '/' + files[i];
+      if (fs.statSync(filePath).isFile())
+        fs.unlinkSync(filePath);
+      else
+        rmDir(filePath);
+    }
+};
 
 function extractGroups(fileList) {
   const groupList = fileList
@@ -56,16 +70,17 @@ function generateGroupCommand(groupData) {
 if (!fs.existsSync('intermediate')) {
   fs.mkdirSync('intermediate');
 } else {
-  exec('rm intermediate/*')
+  rmFilesInDir('intermediate');
 }
 if (!fs.existsSync('out')) {
   fs.mkdirSync('out');
 } else {
-  exec('rm out/*')
+  rmFilesInDir('out');
 }
 
 const imageList = fs.readdirSync(IMAGE_PATH)
-  .filter(image => image.match(/\.(gif|jpg|jpeg|png)$/))
+  .filter(image => image.match(FILE_REGEX))
+  .filter(image => image.match(/^[^\.]/))
 ;
 
 console.log(`${imageList.length} images found`);
@@ -82,7 +97,7 @@ Promise.all(commandList.map(command => exec(command)))
       .map(group => `intermediate/${group}.png`)
     ;
 
-    const command = `convert -background transparent ${groupList.join(' ')} -append out/${IMAGE_PATH}.png`;
+    const command = `convert -background transparent ${groupList.join(' ')} -append out/${OUT_IMAGE_PATH}.png`;
     return exec(command);
   })
 ;
